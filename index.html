@@ -1,109 +1,199 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AF Stores</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
-    header { background: #007bff; color: white; text-align: center; padding: 20px 0; font-size: 2rem; }
-    main { display: flex; flex-wrap: wrap; justify-content: center; padding: 20px; gap: 20px; }
-    .product-card { background: white; padding: 15px; border-radius: 10px; width: 200px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
-    .product-card h3 { margin: 10px 0 5px; text-align: center; }
-    .product-card p { margin: 5px 0; }
-    .product-card button { margin-top: 10px; padding: 5px 10px; border: none; border-radius: 5px; background: #28a745; color: white; cursor: pointer; }
-    .product-card button:disabled { background: #ccc; cursor: not-allowed; }
-    #cart { background: #fff; padding: 20px; margin: 20px auto; border-radius: 10px; width: 90%; max-width: 500px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    #cart h2 { margin-top: 0; }
-    #cart ul { list-style: none; padding: 0; }
-    #cart li { margin: 5px 0; }
-    #cart p { font-weight: bold; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AF Stores</title>
+<style>
+/* GENERAL */
+* { box-sizing: border-box; margin:0; padding:0; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-size: cover; background-position: center; transition: background 0.5s; min-height: 100vh; }
+
+/* HEADER */
+header { background: rgba(0,0,0,0.7); color:white; text-align:center; padding:20px 0; font-size:2rem; position:sticky; top:0; z-index:100; }
+
+/* CATEGORIES */
+.categories { display:flex; justify-content:center; gap:20px; flex-wrap: wrap; padding:60px 20px; }
+.category-card { width:200px; height:180px; background: rgba(255,255,255,0.95); border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.2); transition: transform 0.3s, box-shadow 0.3s; text-align:center; text-transform: uppercase; }
+.category-card:hover { transform: scale(1.08); box-shadow:0 6px 15px rgba(0,0,0,0.3); }
+
+/* BACK BUTTON */
+#backBtn { margin:20px auto; display:block; padding:8px 18px; border:none; border-radius:5px; background:#007bff; color:white; cursor:pointer; font-size:1rem; transition: background 0.3s; }
+#backBtn:hover { background:#0056b3; }
+
+/* PRODUCT GRID */
+main { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:20px; padding:20px; }
+.product-card { background:white; border-radius:15px; padding:15px; text-align:center; box-shadow:0 3px 8px rgba(0,0,0,0.15); transition: transform 0.3s, box-shadow 0.3s; display:flex; flex-direction:column; align-items:center; }
+.product-card:hover { transform: translateY(-5px); box-shadow:0 6px 15px rgba(0,0,0,0.25); }
+.product-card img { width:120px; height:120px; object-fit:cover; border-radius:10px; margin-bottom:10px; }
+
+/* BUTTONS */
+.product-card button { margin-top:auto; padding:6px 12px; border:none; border-radius:5px; background:#28a745; color:white; cursor:pointer; font-weight:bold; transition: background 0.3s; }
+.product-card button:disabled { background:#ccc; cursor:not-allowed; }
+.product-card button:hover:not(:disabled) { background:#218838; }
+
+/* CART */
+#cart { position: fixed; top:80px; right:-350px; width:300px; max-width:80%; background:#fff; padding:20px; border-radius:15px; box-shadow:0 4px 12px rgba(0,0,0,0.2); transition: right 0.5s ease; z-index:200; }
+#cart.active { right:20px; }
+#cart h2 { margin-bottom:15px; }
+#cart ul { list-style:none; padding:0; max-height:250px; overflow-y:auto; }
+#cart li { margin:6px 0; display:flex; justify-content:space-between; font-weight:500; }
+#cart p { font-weight:bold; font-size:1.1rem; text-align:right; margin-top:10px; }
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .categories { flex-direction: column; align-items:center; }
+  .category-card { width:80%; }
+}
+</style>
 </head>
 <body>
 
 <header>AF Stores</header>
 
+<!-- CATEGORIES -->
+<div class="categories" id="categories">
+  <div class="category-card" onclick="selectCategory('vegetables')">Vegetables</div>
+  <div class="category-card" onclick="selectCategory('stationery')">Stationery</div>
+  <div class="category-card" onclick="selectCategory('bakery')">Bakery</div>
+</div>
+
+<button id="backBtn" onclick="goBack()" style="display:none;">⬅ Back to Categories</button>
+
+<!-- PRODUCTS -->
 <main id="productList"></main>
 
+<!-- CART -->
 <div id="cart">
   <h2>Your Cart</h2>
   <ul id="cartList"></ul>
   <p id="total">Total: ₹0</p>
 </div>
 
-<!-- Firebase SDKs -->
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyA2aDktsW6eAVuT9M-1ZfALjlhUO6IWBCk",
-    authDomain: "af-store-ca33c.firebaseapp.com",
-    databaseURL: "https://af-store-ca33c-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "af-store-ca33c",
-    storageBucket: "af-store-ca33c.firebasestorage.app",
-    messagingSenderId: "980051034376",
-    appId: "1:980051034376:web:132c059b120a7a19b7acbd",
-    measurementId: "G-SW5R6Y6DLD"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyA2aDktsW6eAVuT9M-1ZfALjlhUO6IWBCk",
+  authDomain: "af-store-ca33c.firebaseapp.com",
+  databaseURL: "https://af-store-ca33c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "af-store-ca33c",
+  storageBucket: "af-store-ca33c.firebasestorage.app",
+  messagingSenderId: "980051034376",
+  appId: "1:980051034376:web:132c059b120a7a19b7acbd",
+  measurementId: "G-SW5R6Y6DLD"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+const productList = document.getElementById('productList');
+const categoriesDiv = document.getElementById('categories');
+const backBtn = document.getElementById('backBtn');
+const cartList = document.getElementById('cartList');
+const totalEl = document.getElementById('total');
+const cartEl = document.getElementById('cart');
 
-  const productList = document.getElementById('productList');
-  const cartList = document.getElementById('cartList');
-  const totalEl = document.getElementById('total');
+const cart = {};
+let currentCategory = '';
 
-  const cart = {};
+// BACKGROUNDS
+const backgrounds = {
+  vegetables: 'https://images.unsplash.com/photo-1582515073490-399813d3d202?auto=format&fit=crop&w=1350&q=80',
+  stationery: 'https://images.unsplash.com/photo-1611067773434-3ed6f2a92e49?auto=format&fit=crop&w=1350&q=80',
+  bakery: 'https://images.unsplash.com/photo-1599785209707-2e112fdcd273?auto=format&fit=crop&w=1350&q=80'
+};
 
-  // Display products
-  db.ref('products').on('value', snapshot => {
+function selectCategory(cat){
+  currentCategory = cat;
+  categoriesDiv.style.display = 'none';
+  backBtn.style.display = 'block';
+  document.body.style.backgroundImage = `url(${backgrounds[cat]})`;
+  loadProducts(cat);
+}
+
+function goBack(){
+  categoriesDiv.style.display = 'flex';
+  backBtn.style.display = 'none';
+  productList.innerHTML = '';
+  document.body.style.backgroundImage = '';
+  currentCategory = '';
+}
+
+function loadProducts(category){
+  db.ref('products').once('value', snapshot => {
     productList.innerHTML = '';
     snapshot.forEach(itemSnap => {
       const item = itemSnap.val();
-      const card = document.createElement('div');
-      card.className = 'product-card';
-      card.innerHTML = `
-        <h3>${item.name}</h3>
-        <p>Price: ₹${item.price}</p>
-        <p>Stock: ${item.stock}</p>
-        <button ${item.stock <= 0 ? 'disabled' : ''} onclick="addToCart('${itemSnap.key}')">Add to Cart</button>
-      `;
-      productList.appendChild(card);
-    });
-    updateCartDisplay();
-  });
-
-  function addToCart(productId) {
-    const productRef = db.ref('products/' + productId);
-    productRef.transaction(product => {
-      if (product && product.stock > 0) {
-        product.stock--;
-        if (cart[productId]) {
-          cart[productId].quantity++;
-        } else {
-          cart[productId] = { name: product.name, price: product.price, quantity: 1 };
-        }
+      if(item.category === category){
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        const imgUrl = item.image || 'https://via.placeholder.com/120';
+        card.innerHTML = `
+          <img src="${imgUrl}" alt="${item.name}">
+          <h3>${item.name}</h3>
+          <p>Price: ₹${item.price}</p>
+          <p>Stock: ${item.stock}</p>
+          <button ${item.stock<=0?'disabled':''} onclick="addToCart('${itemSnap.key}')">Add to Cart</button>
+        `;
+        productList.appendChild(card);
       }
-      return product;
     });
-    updateCartDisplay();
-  }
+  });
+}
 
-  function updateCartDisplay() {
-    cartList.innerHTML = '';
-    let total = 0;
-    for (let key in cart) {
-      const item = cart[key];
-      const li = document.createElement('li');
-      li.textContent = `${item.name} x${item.quantity} - ₹${item.price * item.quantity}`;
-      cartList.appendChild(li);
-      total += item.price * item.quantity;
+function addToCart(productId){
+  const productRef = db.ref('products/'+productId);
+  productRef.transaction(product=>{
+    if(product && product.stock>0){
+      product.stock--;
+      if(cart[productId]){
+        cart[productId].quantity++;
+      } else {
+        cart[productId] = {name: product.name, price: product.price, quantity:1};
+      }
     }
-    totalEl.textContent = 'Total: ₹' + total;
-  }
-</script>
+    return product;
+  });
+  updateCartDisplay();
+  animateCart();
+}
 
+function updateCartDisplay(){
+  cartList.innerHTML='';
+  let total=0;
+  for(let key in cart){
+    const item = cart[key];
+    const li = document.createElement('li');
+    li.textContent = `${item.name} x${item.quantity} - ₹${item.price*item.quantity}`;
+    cartList.appendChild(li);
+    total += item.price*item.quantity;
+  }
+  totalEl.textContent = 'Total: ₹'+total;
+}
+
+// CART ANIMATION
+function animateCart(){
+  cartEl.classList.add('active');
+  setTimeout(()=>{cartEl.classList.remove('active');}, 1500);
+}
+
+// INITIAL PRODUCTS
+const initialProducts = {
+  "tomatoes": { name:"Tomatoes", price:20, stock:30, category:"vegetables", image:"https://images.unsplash.com/photo-1606788075762-2fa8e1b4e6f0?auto=format&fit=crop&w=100&q=80" },
+  "potatoes": { name:"Potatoes", price:15, stock:40, category:"vegetables", image:"https://images.unsplash.com/photo-1582515073490-399813d3d202?auto=format&fit=crop&w=100&q=80" },
+  "notebook": { name:"Notebook", price:50, stock:20, category:"stationery", image:"https://images.unsplash.com/photo-1611067773434-3ed6f2a92e49?auto=format&fit=crop&w=100&q=80" },
+  "penpack": { name:"Pen Pack", price:30, stock:50, category:"stationery", image:"https://images.unsplash.com/photo-1611067773434-3ed6f2a92e49?auto=format&fit=crop&w=100&q=80" },
+  "croissant": { name:"Croissant", price:25, stock:15, category:"bakery", image:"https://images.unsplash.com/photo-1599785209707-2e112fdcd273?auto=format&fit=crop&w=100&q=80" },
+  "bread": { name:"Bread", price:20, stock:25, category:"bakery", image:"https://images.unsplash.com/photo-1599785209707-2e112fdcd273?auto=format&fit=crop&w=100&q=80" }
+};
+
+db.ref('products').once('value', snap=>{
+  if(!snap.exists()){
+    db.ref('products').set(initialProducts);
+  }
+});
+</script>
 </body>
 </html>
