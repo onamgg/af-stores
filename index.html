@@ -136,12 +136,12 @@ import { getFirestore, collection, getDocs, doc, updateDoc }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "PASTE_YOURS",
-  authDomain: "PASTE_YOURS",
-  projectId: "PASTE_YOURS",
-  storageBucket: "PASTE_YOURS",
-  messagingSenderId: "PASTE_YOURS",
-  appId: "PASTE_YOURS"
+  apiKey: "AIzaSyDUeKvzHtL3wfad44uYZy4BauoBKLl75Xc",
+  authDomain: "af-stores.firebaseapp.com",
+  projectId: "af-stores",
+  storageBucket: "af-stores.firebasestorage.app",
+  messagingSenderId: "812053057314",
+  appId: "1:812053057314:web:6eac81748c9dae4018df7b"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -152,57 +152,64 @@ let currentProducts = [];
 
 // Show category
 window.showCategory = async function(category){
-  const productsDiv = document.getElementById("products");
-  productsDiv.innerHTML = "";
-  productsDiv.style.display = "block";
+  try {
+    const productsDiv = document.getElementById("products");
+    productsDiv.innerHTML = "";
+    productsDiv.style.display = "block";
 
-  const querySnapshot = await getDocs(collection(db, "products"));
-  currentProducts = [];
+    const querySnapshot = await getDocs(collection(db, "products"));
+    currentProducts = [];
 
-  querySnapshot.forEach((docSnap) => {
-    const data = docSnap.data();
-    if(data.category === category){
-      currentProducts.push({
-        id: docSnap.id,
-        ...data
-      });
-    }
-  });
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if(data.category === category){
+        currentProducts.push({
+          id: docSnap.id,
+          ...data
+        });
+      }
+    });
 
-  currentProducts.forEach((item, index) => {
-    productsDiv.innerHTML += `
-      <div class="product">
-        <img src="${item.image}">
-        <h3>${item.name}</h3>
-        <p>Price: ₹${item.price}</p>
-        <p>Stock: ${item.stock}</p>
-        <button onclick="addToCart(${index})">Add to Cart</button>
-      </div>
-    `;
-  });
-};
-
-// Add to cart + update stock in Firebase
-window.addToCart = async function(index){
-  const item = currentProducts[index];
-
-  if(item.stock <= 0){
-    alert("Out of Stock");
-    return;
+    currentProducts.forEach((item, index) => {
+      productsDiv.innerHTML += `
+        <div class="product">
+          <img src="${item.image}">
+          <h3>${item.name}</h3>
+          <p>Price: ₹${item.price}</p>
+          <p>Stock: ${item.stock}</p>
+          <button onclick="addToCart(${index})">Add to Cart</button>
+        </div>
+      `;
+    });
+  } catch (error) {
+    console.error("Error loading products:", error);
   }
-
-  const productRef = doc(db, "products", item.id);
-
-  await updateDoc(productRef, {
-    stock: item.stock - 1
-  });
-
-  cart.push(item);
-  updateCart();
-  showCategory(item.category);
 };
 
-// Update cart UI
+// Add to cart
+window.addToCart = async function(index){
+  try {
+    const item = currentProducts[index];
+
+    if(item.stock <= 0){
+      alert("Out of Stock");
+      return;
+    }
+
+    const productRef = doc(db, "products", item.id);
+
+    await updateDoc(productRef, {
+      stock: item.stock - 1
+    });
+
+    cart.push(item);
+    updateCart();
+    showCategory(item.category);
+  } catch (error) {
+    console.error("Error updating stock:", error);
+  }
+};
+
 function updateCart(){
   const cartList = document.getElementById("cartList");
   const total = document.getElementById("total");
@@ -234,6 +241,5 @@ window.checkout = function(){
 };
 
 </script>
-
 </body>
 </html>
