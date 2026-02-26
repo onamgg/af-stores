@@ -75,19 +75,6 @@ main { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr))
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyA2aDktsW6eAVuT9M-1ZfALjlhUO6IWBCk",
-  authDomain: "af-store-ca33c.firebaseapp.com",
-  databaseURL: "https://af-store-ca33c-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "af-store-ca33c",
-  storageBucket: "af-store-ca33c.firebasestorage.app",
-  messagingSenderId: "980051034376",
-  appId: "1:980051034376:web:132c059b120a7a19b7acbd",
-  measurementId: "G-SW5R6Y6DLD"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
 const productList = document.getElementById('productList');
 const categoriesDiv = document.getElementById('categories');
 const backBtn = document.getElementById('backBtn');
@@ -104,6 +91,16 @@ const backgrounds = {
   stationery: 'https://images.unsplash.com/photo-1611067773434-3ed6f2a92e49?auto=format&fit=crop&w=1350&q=80',
   bakery: 'https://images.unsplash.com/photo-1599785209707-2e112fdcd273?auto=format&fit=crop&w=1350&q=80'
 };
+
+// LOCAL FALLBACK PRODUCTS (always works)
+const products = [
+  { id:"1", name:"Tomatoes", price:20, stock:30, category:"vegetables", image:"https://via.placeholder.com/120" },
+  { id:"2", name:"Potatoes", price:15, stock:40, category:"vegetables", image:"https://via.placeholder.com/120" },
+  { id:"3", name:"Notebook", price:50, stock:20, category:"stationery", image:"https://via.placeholder.com/120" },
+  { id:"4", name:"Pen Pack", price:30, stock:50, category:"stationery", image:"https://via.placeholder.com/120" },
+  { id:"5", name:"Croissant", price:25, stock:15, category:"bakery", image:"https://via.placeholder.com/120" },
+  { id:"6", name:"Bread", price:20, stock:25, category:"bakery", image:"https://via.placeholder.com/120" }
+];
 
 function selectCategory(cat){
   currentCategory = cat;
@@ -122,40 +119,41 @@ function goBack(){
 }
 
 function loadProducts(category){
-  db.ref('products').once('value', snapshot => {
-    productList.innerHTML = '';
-    snapshot.forEach(itemSnap => {
-      const item = itemSnap.val();
-      if(item.category === category){
-        const card = document.createElement('div');
-        card.className = 'product-card';
-        const imgUrl = item.image || 'https://via.placeholder.com/120';
-        card.innerHTML = `
-          <img src="${imgUrl}" alt="${item.name}">
-          <h3>${item.name}</h3>
-          <p>Price: ₹${item.price}</p>
-          <p>Stock: ${item.stock}</p>
-          <button ${item.stock<=0?'disabled':''} onclick="addToCart('${itemSnap.key}')">Add to Cart</button>
-        `;
-        productList.appendChild(card);
-      }
-    });
+  productList.innerHTML = '';
+
+  const filtered = products.filter(p => p.category === category);
+
+  if(filtered.length === 0){
+    productList.innerHTML = "<h2 style='color:white;'>No products found</h2>";
+    return;
+  }
+
+  filtered.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+
+    card.innerHTML = `
+      <img src="${item.image}" alt="${item.name}">
+      <h3>${item.name}</h3>
+      <p>Price: ₹${item.price}</p>
+      <p>Stock: ${item.stock}</p>
+      <button onclick="addToCart('${item.id}')">Add to Cart</button>
+    `;
+
+    productList.appendChild(card);
   });
 }
 
-function addToCart(productId){
-  const productRef = db.ref('products/'+productId);
-  productRef.transaction(product=>{
-    if(product && product.stock>0){
-      product.stock--;
-      if(cart[productId]){
-        cart[productId].quantity++;
-      } else {
-        cart[productId] = {name: product.name, price: product.price, quantity:1};
-      }
-    }
-    return product;
-  });
+function addToCart(id){
+  const item = products.find(p => p.id === id);
+  if(!item) return;
+
+  if(cart[id]){
+    cart[id].quantity++;
+  } else {
+    cart[id] = { name:item.name, price:item.price, quantity:1 };
+  }
+
   updateCartDisplay();
   animateCart();
 }
@@ -163,6 +161,7 @@ function addToCart(productId){
 function updateCartDisplay(){
   cartList.innerHTML='';
   let total=0;
+
   for(let key in cart){
     const item = cart[key];
     const li = document.createElement('li');
@@ -170,30 +169,14 @@ function updateCartDisplay(){
     cartList.appendChild(li);
     total += item.price*item.quantity;
   }
+
   totalEl.textContent = 'Total: ₹'+total;
 }
 
-// CART ANIMATION
 function animateCart(){
   cartEl.classList.add('active');
   setTimeout(()=>{cartEl.classList.remove('active');}, 1500);
 }
-
-// INITIAL PRODUCTS
-const initialProducts = {
-  "tomatoes": { name:"Tomatoes", price:20, stock:30, category:"vegetables", image:"https://images.unsplash.com/photo-1606788075762-2fa8e1b4e6f0?auto=format&fit=crop&w=100&q=80" },
-  "potatoes": { name:"Potatoes", price:15, stock:40, category:"vegetables", image:"https://images.unsplash.com/photo-1582515073490-399813d3d202?auto=format&fit=crop&w=100&q=80" },
-  "notebook": { name:"Notebook", price:50, stock:20, category:"stationery", image:"https://images.unsplash.com/photo-1611067773434-3ed6f2a92e49?auto=format&fit=crop&w=100&q=80" },
-  "penpack": { name:"Pen Pack", price:30, stock:50, category:"stationery", image:"https://images.unsplash.com/photo-1611067773434-3ed6f2a92e49?auto=format&fit=crop&w=100&q=80" },
-  "croissant": { name:"Croissant", price:25, stock:15, category:"bakery", image:"https://images.unsplash.com/photo-1599785209707-2e112fdcd273?auto=format&fit=crop&w=100&q=80" },
-  "bread": { name:"Bread", price:20, stock:25, category:"bakery", image:"https://images.unsplash.com/photo-1599785209707-2e112fdcd273?auto=format&fit=crop&w=100&q=80" }
-};
-
-db.ref('products').once('value', snap=>{
-  if(!snap.exists()){
-    db.ref('products').set(initialProducts);
-  }
-});
 </script>
 </body>
 </html>
