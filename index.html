@@ -1,182 +1,239 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AF Stores</title>
+
 <style>
-/* GENERAL */
-* { box-sizing: border-box; margin:0; padding:0; }
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-size: cover; background-position: center; transition: background 0.5s; min-height: 100vh; }
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #eaeaea;
+  transition: 0.4s;
+}
 
-/* HEADER */
-header { background: rgba(0,0,0,0.7); color:white; text-align:center; padding:20px 0; font-size:2rem; position:sticky; top:0; z-index:100; }
+h1 {
+  background: #222;
+  color: white;
+  padding: 15px;
+  margin: 0;
+}
 
-/* CATEGORIES */
-.categories { display:flex; justify-content:center; gap:20px; flex-wrap: wrap; padding:60px 20px; }
-.category-card { width:200px; height:180px; background: rgba(255,255,255,0.95); border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.2); transition: transform 0.3s, box-shadow 0.3s; text-align:center; text-transform: uppercase; }
-.category-card:hover { transform: scale(1.08); box-shadow:0 6px 15px rgba(0,0,0,0.3); }
+#categories button {
+  padding: 10px 20px;
+  margin: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
 
-/* BACK BUTTON */
-#backBtn { margin:20px auto; display:block; padding:8px 18px; border:none; border-radius:5px; background:#007bff; color:white; cursor:pointer; font-size:1rem; transition: background 0.3s; }
-#backBtn:hover { background:#0056b3; }
+#products {
+  display: none;
+  margin-top: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 
-/* PRODUCT GRID */
-main { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:20px; padding:20px; }
-.product-card { background:white; border-radius:15px; padding:15px; text-align:center; box-shadow:0 3px 8px rgba(0,0,0,0.15); transition: transform 0.3s, box-shadow 0.3s; display:flex; flex-direction:column; align-items:center; }
-.product-card:hover { transform: translateY(-5px); box-shadow:0 6px 15px rgba(0,0,0,0.25); }
-.product-card img { width:120px; height:120px; object-fit:cover; border-radius:10px; margin-bottom:10px; }
+.product {
+  border: 1px solid #ccc;
+  margin: 15px;
+  padding: 10px;
+  width: 220px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 8px;
+  display: inline-block;
+}
 
-/* BUTTONS */
-.product-card button { margin-top:auto; padding:6px 12px; border:none; border-radius:5px; background:#28a745; color:white; cursor:pointer; font-weight:bold; transition: background 0.3s; }
-.product-card button:disabled { background:#ccc; cursor:not-allowed; }
-.product-card button:hover:not(:disabled) { background:#218838; }
+.product img {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+}
 
-/* CART */
-#cart { position: fixed; top:80px; right:-350px; width:300px; max-width:80%; background:#fff; padding:20px; border-radius:15px; box-shadow:0 4px 12px rgba(0,0,0,0.2); transition: right 0.5s ease; z-index:200; }
-#cart.active { right:20px; }
-#cart h2 { margin-bottom:15px; }
-#cart ul { list-style:none; padding:0; max-height:250px; overflow-y:auto; }
-#cart li { margin:6px 0; display:flex; justify-content:space-between; font-weight:500; }
-#cart p { font-weight:bold; font-size:1.1rem; text-align:right; margin-top:10px; }
+/* Cart Button */
+#cartButton {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  background: green;
+  color: white;
+  padding: 10px 15px;
+  cursor: pointer;
+  border-radius: 5px;
+  z-index: 1000;
+}
 
-/* RESPONSIVE */
-@media(max-width:600px){
-  .categories { flex-direction: column; align-items:center; }
-  .category-card { width:80%; }
+/* Cart Panel */
+#cart {
+  position: fixed;
+  right: -320px;
+  top: 0;
+  width: 300px;
+  height: 100%;
+  background: #f4f4f4;
+  border-left: 2px solid #ccc;
+  padding: 10px;
+  overflow-y: auto;
+  transition: 0.3s;
+}
+
+#cart.show {
+  right: 0;
+}
+
+#cart li button {
+  margin-left: 10px;
+  background: crimson;
+  color: white;
+  border: none;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.checkout-btn {
+  background: green;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
 }
 </style>
 </head>
+
 <body>
 
-<header>AF Stores</header>
+<h1>AF Stores</h1>
 
-<!-- CATEGORIES -->
-<div class="categories" id="categories">
-  <div class="category-card" onclick="selectCategory('vegetables')">Vegetables</div>
-  <div class="category-card" onclick="selectCategory('stationery')">Stationery</div>
-  <div class="category-card" onclick="selectCategory('bakery')">Bakery</div>
+<div id="cartButton" onclick="toggleCart()">🛒 Cart</div>
+
+<div id="categories">
+  <button onclick="showCategory('vegetable')">Vegetables</button>
+  <button onclick="showCategory('stationary')">Stationary</button>
+  <button onclick="showCategory('bakery')">Bakery</button>
 </div>
 
-<button id="backBtn" onclick="goBack()" style="display:none;">⬅ Back to Categories</button>
+<div id="products"></div>
 
-<!-- PRODUCTS -->
-<main id="productList"></main>
-
-<!-- CART -->
 <div id="cart">
   <h2>Your Cart</h2>
   <ul id="cartList"></ul>
   <p id="total">Total: ₹0</p>
+  <button onclick="checkout()" class="checkout-btn">Checkout</button>
 </div>
 
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<script type="module">
 
-<script>
-const productList = document.getElementById('productList');
-const categoriesDiv = document.getElementById('categories');
-const backBtn = document.getElementById('backBtn');
-const cartList = document.getElementById('cartList');
-const totalEl = document.getElementById('total');
-const cartEl = document.getElementById('cart');
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, updateDoc } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const cart = {};
-let currentCategory = '';
-
-// BACKGROUNDS
-const backgrounds = {
-  vegetables: 'https://images.unsplash.com/photo-1582515073490-399813d3d202?auto=format&fit=crop&w=1350&q=80',
-  stationery: 'https://images.unsplash.com/photo-1611067773434-3ed6f2a92e49?auto=format&fit=crop&w=1350&q=80',
-  bakery: 'https://images.unsplash.com/photo-1599785209707-2e112fdcd273?auto=format&fit=crop&w=1350&q=80'
+const firebaseConfig = {
+  apiKey: "PASTE_YOURS",
+  authDomain: "PASTE_YOURS",
+  projectId: "PASTE_YOURS",
+  storageBucket: "PASTE_YOURS",
+  messagingSenderId: "PASTE_YOURS",
+  appId: "PASTE_YOURS"
 };
 
-// LOCAL FALLBACK PRODUCTS (always works)
-const products = [
-  { id:"1", name:"Tomatoes", price:20, stock:30, category:"vegetables", image:"https://via.placeholder.com/120" },
-  { id:"2", name:"Potatoes", price:15, stock:40, category:"vegetables", image:"https://via.placeholder.com/120" },
-  { id:"3", name:"Notebook", price:50, stock:20, category:"stationery", image:"https://via.placeholder.com/120" },
-  { id:"4", name:"Pen Pack", price:30, stock:50, category:"stationery", image:"https://via.placeholder.com/120" },
-  { id:"5", name:"Croissant", price:25, stock:15, category:"bakery", image:"https://via.placeholder.com/120" },
-  { id:"6", name:"Bread", price:20, stock:25, category:"bakery", image:"https://via.placeholder.com/120" }
-];
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-function selectCategory(cat){
-  currentCategory = cat;
-  categoriesDiv.style.display = 'none';
-  backBtn.style.display = 'block';
-  document.body.style.backgroundImage = `url(${backgrounds[cat]})`;
-  loadProducts(cat);
-}
+let cart = [];
+let currentProducts = [];
 
-function goBack(){
-  categoriesDiv.style.display = 'flex';
-  backBtn.style.display = 'none';
-  productList.innerHTML = '';
-  document.body.style.backgroundImage = '';
-  currentCategory = '';
-}
+// Show category
+window.showCategory = async function(category){
+  const productsDiv = document.getElementById("products");
+  productsDiv.innerHTML = "";
+  productsDiv.style.display = "block";
 
-function loadProducts(category){
-  productList.innerHTML = '';
+  const querySnapshot = await getDocs(collection(db, "products"));
+  currentProducts = [];
 
-  const filtered = products.filter(p => p.category === category);
+  querySnapshot.forEach((docSnap) => {
+    const data = docSnap.data();
+    if(data.category === category){
+      currentProducts.push({
+        id: docSnap.id,
+        ...data
+      });
+    }
+  });
 
-  if(filtered.length === 0){
-    productList.innerHTML = "<h2 style='color:white;'>No products found</h2>";
+  currentProducts.forEach((item, index) => {
+    productsDiv.innerHTML += `
+      <div class="product">
+        <img src="${item.image}">
+        <h3>${item.name}</h3>
+        <p>Price: ₹${item.price}</p>
+        <p>Stock: ${item.stock}</p>
+        <button onclick="addToCart(${index})">Add to Cart</button>
+      </div>
+    `;
+  });
+};
+
+// Add to cart + update stock in Firebase
+window.addToCart = async function(index){
+  const item = currentProducts[index];
+
+  if(item.stock <= 0){
+    alert("Out of Stock");
     return;
   }
 
-  filtered.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'product-card';
+  const productRef = doc(db, "products", item.id);
 
-    card.innerHTML = `
-      <img src="${item.image}" alt="${item.name}">
-      <h3>${item.name}</h3>
-      <p>Price: ₹${item.price}</p>
-      <p>Stock: ${item.stock}</p>
-      <button onclick="addToCart('${item.id}')">Add to Cart</button>
-    `;
-
-    productList.appendChild(card);
+  await updateDoc(productRef, {
+    stock: item.stock - 1
   });
+
+  cart.push(item);
+  updateCart();
+  showCategory(item.category);
+};
+
+// Update cart UI
+function updateCart(){
+  const cartList = document.getElementById("cartList");
+  const total = document.getElementById("total");
+  cartList.innerHTML="";
+  let sum=0;
+
+  cart.forEach((item)=>{
+    sum+=item.price;
+    cartList.innerHTML+=`
+      <li>${item.name} - ₹${item.price}</li>`;
+  });
+
+  total.innerText="Total: ₹"+sum;
 }
 
-function addToCart(id){
-  const item = products.find(p => p.id === id);
-  if(!item) return;
+window.toggleCart = function(){
+  document.getElementById("cart").classList.toggle("show");
+};
 
-  if(cart[id]){
-    cart[id].quantity++;
-  } else {
-    cart[id] = { name:item.name, price:item.price, quantity:1 };
+window.checkout = function(){
+  if(cart.length === 0){
+    alert("Your cart is empty!");
+    return;
   }
 
-  updateCartDisplay();
-  animateCart();
-}
+  cart = [];
+  updateCart();
+  window.location.href = "thankyou.html";
+};
 
-function updateCartDisplay(){
-  cartList.innerHTML='';
-  let total=0;
-
-  for(let key in cart){
-    const item = cart[key];
-    const li = document.createElement('li');
-    li.textContent = `${item.name} x${item.quantity} - ₹${item.price*item.quantity}`;
-    cartList.appendChild(li);
-    total += item.price*item.quantity;
-  }
-
-  totalEl.textContent = 'Total: ₹'+total;
-}
-
-function animateCart(){
-  cartEl.classList.add('active');
-  setTimeout(()=>{cartEl.classList.remove('active');}, 1500);
-}
 </script>
+
 </body>
 </html>
