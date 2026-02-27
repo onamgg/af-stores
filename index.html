@@ -147,7 +147,7 @@ const db = getFirestore(app);
 let cart = [];
 let currentProducts = [];
 
-// One-time upload to Firestore
+// One-time upload to Firestore (only 3 products, no duplicates)
 async function uploadProducts(products) {
   const existingProducts = await getDocs(collection(db, "products"));
   const existingNames = existingProducts.docs.map(d => d.data().name);
@@ -160,7 +160,7 @@ async function uploadProducts(products) {
   console.log("Products uploaded ✅");
 }
 
-// Manually add your products here OR remove this if already uploaded
+// Only upload 1 Potato, 1 Tomato, 1 Notebook
 uploadProducts([
   {"name":"Potato","category":"vegetable","price":20,"stock":50,"image":"https://images.unsplash.com/photo-1582515073490-dc8e2c5b8c42"},
   {"name":"Tomato","category":"vegetable","price":30,"stock":40,"image":"https://images.unsplash.com/photo-1567306226416-28f0efdc88ce"},
