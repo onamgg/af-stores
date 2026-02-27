@@ -122,72 +122,85 @@ h1 {
 <script>
 let cart = [];
 let currentProducts = [];
+let products = [];
 
-// fetch products from JSON
-async function loadProducts() {
-  const response = await fetch("products.json");
-  return await response.json();
-}
+// Load products from JSON file
+fetch('products.json')
+  .then(res => res.json())
+  .then(data => {
+    products = data;
+    console.log("Products loaded ✅", products);
+  })
+  .catch(err => console.error("Error loading products:", err));
 
-// show products by category
-async function showCategory(category){
-  const products = await loadProducts();
+// Show category
+function showCategory(category){
   const productsDiv = document.getElementById("products");
   productsDiv.innerHTML = "";
-  productsDiv.style.display = "block";
+  productsDiv.style.display = "flex"; // use flex for nice layout
 
-  currentProducts = products.filter(item => item.category === category);
+  const filtered = products.filter(p => p.category === category);
+  currentProducts = filtered; // update global currentProducts
 
-  currentProducts.forEach((item, index) => {
+  filtered.forEach((item, index) => {
     productsDiv.innerHTML += `
       <div class="product">
         <img src="${item.image}">
         <h3>${item.name}</h3>
         <p>Price: ₹${item.price}</p>
         <p>Stock: ${item.stock}</p>
-        <button onclick="addToCart(${index})">Add to Cart</button>
+        <button onclick="addToCart(${index}, '${category}')">Add to Cart</button>
       </div>
     `;
   });
 }
 
-function addToCart(index){
+// Add to cart
+function addToCart(index, category){
   const item = currentProducts[index];
   if(item.stock <= 0){
     alert("Out of Stock");
     return;
   }
-  item.stock -= 1;
+
+  item.stock -= 1; // decrease stock locally
   cart.push(item);
   updateCart();
-  showCategory(item.category); // refresh stock display
+  showCategory(category); // refresh display
 }
 
+// Update cart UI
 function updateCart(){
   const cartList = document.getElementById("cartList");
   const total = document.getElementById("total");
   cartList.innerHTML = "";
   let sum = 0;
+
   cart.forEach(item => {
     sum += item.price;
     cartList.innerHTML += `<li>${item.name} - ₹${item.price}</li>`;
   });
+
   total.innerText = "Total: ₹" + sum;
 }
 
+// Toggle cart panel
 function toggleCart(){
   document.getElementById("cart").classList.toggle("show");
 }
 
+// Checkout
 function checkout(){
   if(cart.length === 0){
     alert("Your cart is empty!");
     return;
   }
+
   cart = [];
   updateCart();
-  alert("Thanks for shopping!");
+  window.location.href = "thankyou.html";
 }
 </script>
 </body>
 </html>
+
