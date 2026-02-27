@@ -4,16 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AF Stores</title>
+
 <style>
 body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
   text-align: center;
+  background: linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)),
+              url('https://images.unsplash.com/photo-1582582494703-9d1146b9c7b1');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-color: #eaeaea;
   transition: 0.4s;
 }
 
@@ -102,14 +104,9 @@ h1 {
   cursor: pointer;
   margin-top: 10px;
 }
-
-input[type="number"] {
-  width: 70px;
-  padding: 3px;
-  margin: 5px 0;
-}
 </style>
 </head>
+
 <body>
 
 <h1>AF Stores</h1>
@@ -151,24 +148,24 @@ const db = getFirestore(app);
 let cart = [];
 let currentProducts = [];
 
-// Upload products manually (if not already in Firebase)
-async function uploadProducts(products){
+// One-time upload to Firebase for initial products
+async function uploadProducts(products) {
   const existingProducts = await getDocs(collection(db, "products"));
   const existingNames = existingProducts.docs.map(d => d.data().name);
 
-  for(const product of products){
-    if(!existingNames.includes(product.name)){
+  for (const product of products) {
+    if (!existingNames.includes(product.name)) {
       await addDoc(collection(db, "products"), product);
     }
   }
   console.log("Products uploaded ✅");
 }
 
-// Add products manually here (or remove if already uploaded)
+// Manually add products you want to appear
 uploadProducts([
-  {name:"Potato", category:"vegetable", price:20, stock:50, image:"https://images.unsplash.com/photo-1582515073490-dc8e2c5b8c42"},
-  {name:"Tomato", category:"vegetable", price:30, stock:40, image:"https://images.unsplash.com/photo-1567306226416-28f0efdc88ce"},
-  {name:"Notebook", category:"stationary", price:60, stock:80, image:"https://images.unsplash.com/photo-1519681393784-d120267933ba"}
+  {"name":"Potato","category":"vegetable","price":20,"stock":50,"image":"https://images.unsplash.com/photo-1582515073490-dc8e2c5b8c42"},
+  {"name":"Tomato","category":"vegetable","price":30,"stock":40,"image":"https://images.unsplash.com/photo-1567306226416-28f0efdc88ce"},
+  {"name":"Notebook","category":"stationary","price":60,"stock":80,"image":"https://images.unsplash.com/photo-1519681393784-d120267933ba"}
 ]);
 
 // Show category
@@ -189,52 +186,33 @@ window.showCategory = async function(category){
 
   currentProducts.forEach((item, index) => {
     productsDiv.innerHTML += `
-      <div class="product" id="product-${index}">
+      <div class="product">
         <img src="${item.image}">
         <h3>${item.name}</h3>
-        ${item.category === "vegetable" ? `<p>Price: ₹${item.price}/kg</p>
-        <input type="number" min="0.1" step="0.1" placeholder="Weight in kg">` 
-        : `<p>Price: ₹${item.price}</p>`}
-        <p>Stock: ${item.stock} ${item.category==="vegetable"?"kg":""}</p>
+        <p>Price: ₹${item.price}</p>
+        <p>Stock: ${item.stock}</p>
         <button onclick="addToCart(${index})">Add to Cart</button>
       </div>`;
   });
 };
 
-// Add to cart
+// Add to cart and reduce stock globally
 window.addToCart = async function(index){
   const item = currentProducts[index];
-  let quantity = 1;
-
-  if(item.category==="vegetable"){
-    const input = document.querySelector(`#product-${index} input`);
-    quantity = parseFloat(input.value);
-    if(!quantity || quantity <= 0){
-      alert("Enter a valid weight in kg");
-      return;
-    }
-    if(quantity > item.stock){
-      alert("Not enough stock!");
-      return;
-    }
-  } else {
-    if(item.stock <= 0){
-      alert("Out of Stock");
-      return;
-    }
+  if(item.stock <= 0){
+    alert("Out of Stock");
+    return;
   }
 
-  const priceForItem = item.category==="vegetable" ? item.price*quantity : item.price;
-
-  // Update stock in Firebase
   const productRef = doc(db, "products", item.id);
-  await updateDoc(productRef, { stock: item.stock - quantity });
+  await updateDoc(productRef, { stock: item.stock - 1 });
 
-  cart.push({...item, quantity, price: priceForItem});
+  cart.push(item);
   updateCart();
   showCategory(item.category);
 };
 
+// Update cart UI
 function updateCart(){
   const cartList = document.getElementById("cartList");
   const total = document.getElementById("total");
@@ -243,21 +221,24 @@ function updateCart(){
 
   cart.forEach(item => {
     sum += item.price;
-    cartList.innerHTML += `<li>${item.name} - ${item.category==="vegetable"?item.quantity+"kg":""} ₹${item.price}</li>`;
+    cartList.innerHTML += `<li>${item.name} - ₹${item.price}</li>`;
   });
 
   total.innerText = "Total: ₹" + sum;
 }
 
+// Cart toggle
 window.toggleCart = function(){
   document.getElementById("cart").classList.toggle("show");
 };
 
+// Checkout
 window.checkout = function(){
-  if(cart.length===0){
+  if(cart.length === 0){
     alert("Your cart is empty!");
     return;
   }
+
   cart = [];
   updateCart();
   window.location.href = "thankyou.html";
