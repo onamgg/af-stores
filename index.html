@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AF Stores</title>
-
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -103,9 +102,14 @@ h1 {
   cursor: pointer;
   margin-top: 10px;
 }
+
+input[type="number"] {
+  width: 70px;
+  padding: 3px;
+  margin: 5px 0;
+}
 </style>
 </head>
-
 <body>
 
 <h1>AF Stores</h1>
@@ -147,58 +151,25 @@ const db = getFirestore(app);
 let cart = [];
 let currentProducts = [];
 
-// Full product list
-const products = [
-  // Vegetables
-  {"name":"Potato","category":"vegetable","price":20,"stock":50,"image":"https://images.unsplash.com/photo-1582515073490-dc8e2c5b8c42"},
-  {"name":"Tomato","category":"vegetable","price":30,"stock":40,"image":"https://images.unsplash.com/photo-1567306226416-28f0efdc88ce"},
-  {"name":"Carrot","category":"vegetable","price":25,"stock":35,"image":"https://i.imgur.com/1G5YZ9w.jpg"},
-  {"name":"Onion","category":"vegetable","price":45,"stock":70,"image":"https://i.imgur.com/NzXzZfB.jpg"},
-  {"name":"Cucumber","category":"vegetable","price":35,"stock":40,"image":"https://i.imgur.com/j1V1n5S.jpg"},
-  {"name":"Capsicum","category":"vegetable","price":60,"stock":30,"image":"https://images.unsplash.com/photo-1601041645699-c82e84aa2aeb"},
-  {"name":"Spinach","category":"vegetable","price":15,"stock":50,"image":"https://images.unsplash.com/photo-1589308078059-9f2aa4f6f10d"},
-  {"name":"Cabbage","category":"vegetable","price":40,"stock":25,"image":"https://images.unsplash.com/photo-1617196031330-47913f604eff"},
-  {"name":"Beetroot","category":"vegetable","price":35,"stock":30,"image":"https://images.unsplash.com/photo-1617196029522-86d27a4f2265"},
-  {"name":"Ladyfinger","category":"vegetable","price":25,"stock":40,"image":"https://images.unsplash.com/photo-1617196030035-735f4e01c2f1"},
+// Upload products manually (if not already in Firebase)
+async function uploadProducts(products){
+  const existingProducts = await getDocs(collection(db, "products"));
+  const existingNames = existingProducts.docs.map(d => d.data().name);
 
-  // Stationary
-  {"name":"Pen Pack","category":"stationary","price":50,"stock":100,"image":"https://i.imgur.com/R7VJk1x.jpg"},
-  {"name":"Pencil","category":"stationary","price":10,"stock":150,"image":"https://i.imgur.com/mX7G7Hd.jpg"},
-  {"name":"Eraser","category":"stationary","price":5,"stock":200,"image":"https://i.imgur.com/2Xv6p0X.jpg"},
-  {"name":"Notebook","category":"stationary","price":60,"stock":80,"image":"https://images.unsplash.com/photo-1519681393784-d120267933ba"},
-  {"name":"Marker","category":"stationary","price":25,"stock":60,"image":"https://images.unsplash.com/photo-1583484963886-cfe2bff2945f"},
-  {"name":"Sketchbook","category":"stationary","price":120,"stock":40,"image":"https://images.unsplash.com/photo-1592194996308-7b43878e84a6"},
-  {"name":"Highlighter","category":"stationary","price":15,"stock":90,"image":"https://images.unsplash.com/photo-1592207247997-50c92e2c5410"},
-  {"name":"Stapler","category":"stationary","price":100,"stock":30,"image":"https://images.unsplash.com/photo-1586854381501-d50e1241ef92"},
-  {"name":"Ruler","category":"stationary","price":10,"stock":100,"image":"https://images.unsplash.com/photo-1592207201512-2b4f43f13eb3"},
-  {"name":"Glue Stick","category":"stationary","price":20,"stock":80,"image":"https://images.unsplash.com/photo-1580679333243-99b6c6f5f450"},
-
-  // Bakery
-  {"name":"Chocolate Cake","category":"bakery","price":200,"stock":20,"image":"https://i.imgur.com/kL7WzJx.jpg"},
-  {"name":"Bread Loaf","category":"bakery","price":40,"stock":35,"image":"https://i.imgur.com/n8D3p8N.jpg"},
-  {"name":"Croissant","category":"bakery","price":60,"stock":25,"image":"https://i.imgur.com/qz3F8SJ.jpg"},
-  {"name":"Cupcake","category":"bakery","price":30,"stock":50,"image":"https://i.imgur.com/f0z3WmH.jpg"},
-  {"name":"Donut","category":"bakery","price":25,"stock":40,"image":"https://images.unsplash.com/photo-1612197508466-1d44da28de5b"},
-  {"name":"Muffin","category":"bakery","price":35,"stock":30,"image":"https://images.unsplash.com/photo-1612197528522-8a33b5d7a7f3"},
-  {"name":"Baguette","category":"bakery","price":50,"stock":20,"image":"https://images.unsplash.com/photo-1586190848861-99aa4a171e90"},
-  {"name":"Donut Glazed","category":"bakery","price":30,"stock":25,"image":"https://images.unsplash.com/photo-1612197547726-b8d96a8f7e3b"},
-  {"name":"Brownie","category":"bakery","price":60,"stock":15,"image":"https://images.unsplash.com/photo-1617196031163-bc34c3fa1295"},
-  {"name":"Cinnamon Roll","category":"bakery","price":40,"stock":20,"image":"https://images.unsplash.com/photo-1617196031310-bf218f0f2ae7"}
-];
-
-// Upload products once (no duplicates)
-async function uploadProductsOnce() {
-  const existing = await getDocs(collection(db, "products"));
-  const existingNames = existing.docs.map(d => d.data().name);
-
-  for (const product of products) {
-    if (!existingNames.includes(product.name)) {
+  for(const product of products){
+    if(!existingNames.includes(product.name)){
       await addDoc(collection(db, "products"), product);
     }
   }
-  console.log("Products synced ✅");
+  console.log("Products uploaded ✅");
 }
-uploadProductsOnce();
+
+// Add products manually here (or remove if already uploaded)
+uploadProducts([
+  {name:"Potato", category:"vegetable", price:20, stock:50, image:"https://images.unsplash.com/photo-1582515073490-dc8e2c5b8c42"},
+  {name:"Tomato", category:"vegetable", price:30, stock:40, image:"https://images.unsplash.com/photo-1567306226416-28f0efdc88ce"},
+  {name:"Notebook", category:"stationary", price:60, stock:80, image:"https://images.unsplash.com/photo-1519681393784-d120267933ba"}
+]);
 
 // Show category
 window.showCategory = async function(category){
@@ -218,11 +189,13 @@ window.showCategory = async function(category){
 
   currentProducts.forEach((item, index) => {
     productsDiv.innerHTML += `
-      <div class="product">
+      <div class="product" id="product-${index}">
         <img src="${item.image}">
         <h3>${item.name}</h3>
-        <p>Price: ₹${item.price}</p>
-        <p>Stock: ${item.stock}</p>
+        ${item.category === "vegetable" ? `<p>Price: ₹${item.price}/kg</p>
+        <input type="number" min="0.1" step="0.1" placeholder="Weight in kg">` 
+        : `<p>Price: ₹${item.price}</p>`}
+        <p>Stock: ${item.stock} ${item.category==="vegetable"?"kg":""}</p>
         <button onclick="addToCart(${index})">Add to Cart</button>
       </div>`;
   });
@@ -231,20 +204,37 @@ window.showCategory = async function(category){
 // Add to cart
 window.addToCart = async function(index){
   const item = currentProducts[index];
-  if(item.stock <= 0){
-    alert("Out of Stock");
-    return;
+  let quantity = 1;
+
+  if(item.category==="vegetable"){
+    const input = document.querySelector(`#product-${index} input`);
+    quantity = parseFloat(input.value);
+    if(!quantity || quantity <= 0){
+      alert("Enter a valid weight in kg");
+      return;
+    }
+    if(quantity > item.stock){
+      alert("Not enough stock!");
+      return;
+    }
+  } else {
+    if(item.stock <= 0){
+      alert("Out of Stock");
+      return;
+    }
   }
 
-  const productRef = doc(db, "products", item.id);
-  await updateDoc(productRef, { stock: item.stock - 1 });
+  const priceForItem = item.category==="vegetable" ? item.price*quantity : item.price;
 
-  cart.push(item);
+  // Update stock in Firebase
+  const productRef = doc(db, "products", item.id);
+  await updateDoc(productRef, { stock: item.stock - quantity });
+
+  cart.push({...item, quantity, price: priceForItem});
   updateCart();
   showCategory(item.category);
 };
 
-// Cart update
 function updateCart(){
   const cartList = document.getElementById("cartList");
   const total = document.getElementById("total");
@@ -253,7 +243,7 @@ function updateCart(){
 
   cart.forEach(item => {
     sum += item.price;
-    cartList.innerHTML += `<li>${item.name} - ₹${item.price}</li>`;
+    cartList.innerHTML += `<li>${item.name} - ${item.category==="vegetable"?item.quantity+"kg":""} ₹${item.price}</li>`;
   });
 
   total.innerText = "Total: ₹" + sum;
@@ -264,11 +254,10 @@ window.toggleCart = function(){
 };
 
 window.checkout = function(){
-  if(cart.length === 0){
+  if(cart.length===0){
     alert("Your cart is empty!");
     return;
   }
-
   cart = [];
   updateCart();
   window.location.href = "thankyou.html";
