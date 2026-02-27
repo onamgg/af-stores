@@ -24,15 +24,25 @@ h1 {
   color: white;
   padding: 15px;
   margin: 0;
+  animation: slideDown 0.6s ease-out;
 }
 
-#aboutStore {
-  background: rgba(255,255,255,0.9);
-  padding: 15px;
-  margin: 10px auto;
-  width: 90%;
-  border-radius: 8px;
-  font-size: 16px;
+@keyframes slideDown {
+  0% { transform: translateY(-50px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+#store-info {
+  margin: 15px auto;
+  max-width: 700px;
+  font-size: 18px;
+  color: #333;
+  animation: fadeIn 1s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 #categories button {
@@ -40,7 +50,9 @@ h1 {
   margin: 10px;
   font-size: 16px;
   cursor: pointer;
+  transition: 0.3s;
 }
+#categories button:hover { transform: scale(1.1); }
 
 #products {
   display: none;
@@ -57,12 +69,15 @@ h1 {
   background: rgba(255,255,255,0.95);
   border-radius: 8px;
   display: inline-block;
+  transition: 0.3s;
 }
+.product:hover { transform: translateY(-5px); box-shadow: 0 8px 12px rgba(0,0,0,0.2); }
 
 .product img {
   width: 100%;
   height: 130px;
   object-fit: cover;
+  border-radius: 5px;
 }
 
 #cartButton {
@@ -89,10 +104,7 @@ h1 {
   overflow-y: auto;
   transition: 0.3s;
 }
-
-#cart.show {
-  right: 0;
-}
+#cart.show { right: 0; }
 
 #cart li button {
   margin-left: 10px;
@@ -120,8 +132,8 @@ h1 {
 
 <h1>AF Stores</h1>
 
-<div id="aboutStore">
-  Welcome to AF Stores! We offer fresh vegetables sold by weight, quality bakery items, and stationery. Stock is updated globally so what you buy affects everyone. Enjoy shopping!
+<div id="store-info">
+  Welcome to AF Stores! We sell fresh vegetables by weight, bakery items, and stationary. Prices are updated live and stock reduces only when you checkout.
 </div>
 
 <div id="cartButton" onclick="toggleCart()">🛒 Cart</div>
@@ -160,32 +172,13 @@ const db = getFirestore(app);
 
 let cart = [];
 let currentProducts = [];
-
-// Upload initial products if not already in Firebase
-async function uploadProducts(products) {
-  const existingProducts = await getDocs(collection(db, "products"));
-  const existingNames = existingProducts.docs.map(d => d.data().name);
-
-  for (const product of products) {
-    if (!existingNames.includes(product.name)) {
-      await addDoc(collection(db, "products"), product);
-    }
-  }
-  console.log("Products uploaded ✅");
-}
-
-// Add your products here
-uploadProducts([
-  {"name":"Potato","category":"vegetable","price":40,"stock":50,"unit":"kg","image":"https://images.unsplash.com/photo-1582515073490-dc8e2c5b8c42"},
-  {"name":"Tomato","category":"vegetable","price":60,"stock":40,"unit":"kg","image":"https://images.unsplash.com/photo-1567306226416-28f0efdc88ce"},
-  {"name":"Notebook","category":"stationary","price":60,"stock":80,"image":"https://images.unsplash.com/photo-1519681393784-d120267933ba"}
-]);
+let customer = { name: '', phone: '' };
 
 // Show category
 window.showCategory = async function(category){
   const productsDiv = document.getElementById("products");
   productsDiv.innerHTML = "";
-  productsDiv.style.display = "block";
+  productsDiv.style.display = "flex";
 
   const querySnapshot = await getDocs(collection(db, "products"));
   currentProducts = [];
@@ -193,61 +186,60 @@ window.showCategory = async function(category){
   querySnapshot.forEach(docSnap => {
     const data = docSnap.data();
     if(data.category === category){
-      currentProducts.push({ id: docSnap.id, ...data });
+      currentProducts.push({ id: docSnap.id, ...data, quantity: 0 });
     }
   });
 
   currentProducts.forEach((item, index) => {
-    let buyButton = '';
-    if(item.category === 'vegetable') {
-      buyButton = `<button onclick="buyWeight(${index})">Buy by kg</button>`;
-    } else {
-      buyButton = `<button onclick="addToCart(${index})">Add to Cart</button>`;
+    let qtyInput = '';
+    if(item.category === 'vegetable'){
+      qtyInput = `<input type="number" min="0" max="${item.stock}" step="0.1" placeholder="kg" 
+      id="veg-${index}" style="width:60px;">`;
     }
-
     productsDiv.innerHTML += `
       <div class="product">
         <img src="${item.image}">
         <h3>${item.name}</h3>
-        <p>Price: ₹${item.price}${item.unit ? ' per ' + item.unit : ''}</p>
-        <p>Stock: ${item.stock}${item.unit ? ' ' + item.unit : ''}</p>
-        ${buyButton}
+        <p>Price: ₹${item.price} per ${item.category==='vegetable'?'kg':'item'}</p>
+        <p>Stock: ${item.stock}${item.category==='vegetable'?' kg':''}</p>
+        ${qtyInput}
+        <button onclick="addToCart(${index})">Add to Cart</button>
       </div>`;
   });
 };
 
-// Buy vegetables by weight
-window.buyWeight = async function(index){
+// Add to cart (does NOT reduce stock yet)
+window.addToCart = function(index){
   const item = currentProducts[index];
-  let kg = parseFloat(prompt(`Enter weight in kg for ${item.name}:`));
-  if(isNaN(kg) || kg <= 0) return alert("Invalid weight");
-  if(kg > item.stock) return alert("Not enough stock");
-
-  const productRef = doc(db, "products", item.id);
-  await updateDoc(productRef, { stock: item.stock - kg });
-
-  cart.push({...item, price: item.price * kg, boughtKg: kg});
-  updateCart();
-  showCategory(item.category);
-};
-
-// Add non-vegetables to cart
-window.addToCart = async function(index){
-  const item = currentProducts[index];
-  if(item.stock <= 0){
-    alert("Out of Stock");
-    return;
+  let quantity = 1;
+  if(item.category === 'vegetable'){
+    const val = parseFloat(document.getElementById(`veg-${index}`).value);
+    if(isNaN(val) || val <= 0){
+      alert("Enter a valid weight in kg!");
+      return;
+    }
+    quantity = val;
+    if(quantity > item.stock){
+      alert("Not enough stock!");
+      return;
+    }
+  } else {
+    if(item.stock <= 0){
+      alert("Out of Stock!");
+      return;
+    }
   }
 
-  const productRef = doc(db, "products", item.id);
-  await updateDoc(productRef, { stock: item.stock - 1 });
+  const existing = cart.find(c => c.id === item.id);
+  if(existing){
+    existing.quantity += quantity;
+  } else {
+    cart.push({ ...item, quantity });
+  }
 
-  cart.push(item);
   updateCart();
-  showCategory(item.category);
 };
 
-// Update cart UI
 function updateCart(){
   const cartList = document.getElementById("cartList");
   const total = document.getElementById("total");
@@ -255,28 +247,54 @@ function updateCart(){
   let sum = 0;
 
   cart.forEach(item => {
-    sum += item.price;
-    let unitText = item.boughtKg ? ` (${item.boughtKg}kg)` : '';
-    cartList.innerHTML += `<li>${item.name}${unitText} - ₹${item.price.toFixed(2)}</li>`;
+    const itemTotal = item.category === 'vegetable' ? item.price * item.quantity : item.price * item.quantity;
+    sum += itemTotal;
+    cartList.innerHTML += `<li>${item.name} - ${item.quantity} ${item.category==='vegetable'?'kg':'pcs'} - ₹${itemTotal}</li>`;
   });
 
-  total.innerText = "Total: ₹" + sum.toFixed(2);
+  total.innerText = "Total: ₹" + sum;
 }
 
-// Cart toggle
 window.toggleCart = function(){
   document.getElementById("cart").classList.toggle("show");
 };
 
-// Checkout
-window.checkout = function(){
+// Checkout (reduces stock and saves order)
+window.checkout = async function(){
   if(cart.length === 0){
     alert("Your cart is empty!");
     return;
   }
 
+  // Prompt for customer info if missing
+  if(!customer.name) customer.name = prompt("Enter your Name (mandatory):");
+  if(!customer.phone) customer.phone = prompt("Enter your Phone Number (mandatory):");
+
+  if(!customer.name || !customer.phone){
+    alert("Name and phone number are required to checkout!");
+    return;
+  }
+
+  // Reduce stock in Firebase
+  for(const item of cart){
+    const productRef = doc(db, "products", item.id);
+    let newStock = item.stock - item.quantity;
+    if(newStock < 0) newStock = 0;
+    await updateDoc(productRef, { stock: newStock });
+  }
+
+  // Save order
+  await addDoc(collection(db, "orders"), {
+    name: customer.name,
+    phone: customer.phone,
+    items: cart.map(i => ({ name: i.name, category: i.category, quantity: i.quantity, price: i.price })),
+    total: cart.reduce((a,b)=>a + b.price*(b.category==='vegetable'?b.quantity: b.quantity),0),
+    timestamp: new Date().toISOString()
+  });
+
   cart = [];
   updateCart();
+  alert("Order placed successfully!");
   window.location.href = "thankyou.html";
 };
 </script>
