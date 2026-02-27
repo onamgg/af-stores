@@ -55,7 +55,6 @@ h1 {
   object-fit: cover;
 }
 
-/* Cart Button */
 #cartButton {
   position: fixed;
   top: 15px;
@@ -68,7 +67,6 @@ h1 {
   z-index: 1000;
 }
 
-/* Cart Panel */
 #cart {
   position: fixed;
   right: -320px;
@@ -84,6 +82,16 @@ h1 {
 
 #cart.show {
   right: 0;
+}
+
+#cart li button {
+  margin-left: 10px;
+  background: crimson;
+  color: white;
+  border: none;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .checkout-btn {
@@ -119,57 +127,90 @@ h1 {
   <button onclick="checkout()" class="checkout-btn">Checkout</button>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, updateDoc, addDoc } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDUeKvzHtL3wfad44uYZy4BauoBKLl75Xc",
+  authDomain: "af-stores.firebaseapp.com",
+  projectId: "af-stores",
+  storageBucket: "af-stores.firebasestorage.app",
+  messagingSenderId: "812053057314",
+  appId: "1:812053057314:web:6eac81748c9dae4018df7b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 let cart = [];
 let currentProducts = [];
-let products = [];
 
-// Load products from JSON file
-fetch('products.json')
-  .then(res => res.json())
-  .then(data => {
-    products = data;
-    console.log("Products loaded ✅", products);
-  })
-  .catch(err => console.error("Error loading products:", err));
+// One-time upload to Firestore
+async function uploadProducts(products) {
+  const existingProducts = await getDocs(collection(db, "products"));
+  const existingNames = existingProducts.docs.map(d => d.data().name);
+
+  for (const product of products) {
+    if (!existingNames.includes(product.name)) {
+      await addDoc(collection(db, "products"), product);
+    }
+  }
+  console.log("Products uploaded ✅");
+}
+
+// Manually add your products here OR remove this if already uploaded
+uploadProducts([
+  {"name":"Potato","category":"vegetable","price":20,"stock":50,"image":"https://images.unsplash.com/photo-1582515073490-dc8e2c5b8c42"},
+  {"name":"Tomato","category":"vegetable","price":30,"stock":40,"image":"https://images.unsplash.com/photo-1567306226416-28f0efdc88ce"},
+  {"name":"Notebook","category":"stationary","price":60,"stock":80,"image":"https://images.unsplash.com/photo-1519681393784-d120267933ba"}
+]);
 
 // Show category
-function showCategory(category){
+window.showCategory = async function(category){
   const productsDiv = document.getElementById("products");
   productsDiv.innerHTML = "";
-  productsDiv.style.display = "flex"; // use flex for nice layout
+  productsDiv.style.display = "block";
 
-  const filtered = products.filter(p => p.category === category);
-  currentProducts = filtered; // update global currentProducts
+  const querySnapshot = await getDocs(collection(db, "products"));
+  currentProducts = [];
 
-  filtered.forEach((item, index) => {
+  querySnapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    if(data.category === category){
+      currentProducts.push({ id: docSnap.id, ...data });
+    }
+  });
+
+  currentProducts.forEach((item, index) => {
     productsDiv.innerHTML += `
       <div class="product">
         <img src="${item.image}">
         <h3>${item.name}</h3>
         <p>Price: ₹${item.price}</p>
         <p>Stock: ${item.stock}</p>
-        <button onclick="addToCart(${index}, '${category}')">Add to Cart</button>
-      </div>
-    `;
+        <button onclick="addToCart(${index})">Add to Cart</button>
+      </div>`;
   });
-}
+};
 
 // Add to cart
-function addToCart(index, category){
+window.addToCart = async function(index){
   const item = currentProducts[index];
   if(item.stock <= 0){
     alert("Out of Stock");
     return;
   }
 
-  item.stock -= 1; // decrease stock locally
+  const productRef = doc(db, "products", item.id);
+  await updateDoc(productRef, { stock: item.stock - 1 });
+
   cart.push(item);
   updateCart();
-  showCategory(category); // refresh display
-}
+  showCategory(item.category);
+};
 
-// Update cart UI
 function updateCart(){
   const cartList = document.getElementById("cartList");
   const total = document.getElementById("total");
@@ -184,13 +225,11 @@ function updateCart(){
   total.innerText = "Total: ₹" + sum;
 }
 
-// Toggle cart panel
-function toggleCart(){
+window.toggleCart = function(){
   document.getElementById("cart").classList.toggle("show");
-}
+};
 
-// Checkout
-function checkout(){
+window.checkout = function(){
   if(cart.length === 0){
     alert("Your cart is empty!");
     return;
@@ -199,8 +238,7 @@ function checkout(){
   cart = [];
   updateCart();
   window.location.href = "thankyou.html";
-}
+};
 </script>
 </body>
 </html>
-
