@@ -26,6 +26,15 @@ h1 {
   margin: 0;
 }
 
+#aboutStore {
+  background: rgba(255,255,255,0.9);
+  padding: 15px;
+  margin: 10px auto;
+  width: 90%;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
 #categories button {
   padding: 10px 20px;
   margin: 10px;
@@ -111,6 +120,10 @@ h1 {
 
 <h1>AF Stores</h1>
 
+<div id="aboutStore">
+  Welcome to AF Stores! We offer fresh vegetables sold by weight, quality bakery items, and stationery. Stock is updated globally so what you buy affects everyone. Enjoy shopping!
+</div>
+
 <div id="cartButton" onclick="toggleCart()">🛒 Cart</div>
 
 <div id="categories">
@@ -148,7 +161,7 @@ const db = getFirestore(app);
 let cart = [];
 let currentProducts = [];
 
-// One-time upload to Firebase for initial products
+// Upload initial products if not already in Firebase
 async function uploadProducts(products) {
   const existingProducts = await getDocs(collection(db, "products"));
   const existingNames = existingProducts.docs.map(d => d.data().name);
@@ -161,10 +174,10 @@ async function uploadProducts(products) {
   console.log("Products uploaded ✅");
 }
 
-// Manually add products you want to appear
+// Add your products here
 uploadProducts([
-  {"name":"Potato","category":"vegetable","price":20,"stock":50,"image":"https://images.unsplash.com/photo-1582515073490-dc8e2c5b8c42"},
-  {"name":"Tomato","category":"vegetable","price":30,"stock":40,"image":"https://images.unsplash.com/photo-1567306226416-28f0efdc88ce"},
+  {"name":"Potato","category":"vegetable","price":40,"stock":50,"unit":"kg","image":"https://images.unsplash.com/photo-1582515073490-dc8e2c5b8c42"},
+  {"name":"Tomato","category":"vegetable","price":60,"stock":40,"unit":"kg","image":"https://images.unsplash.com/photo-1567306226416-28f0efdc88ce"},
   {"name":"Notebook","category":"stationary","price":60,"stock":80,"image":"https://images.unsplash.com/photo-1519681393784-d120267933ba"}
 ]);
 
@@ -185,18 +198,40 @@ window.showCategory = async function(category){
   });
 
   currentProducts.forEach((item, index) => {
+    let buyButton = '';
+    if(item.category === 'vegetable') {
+      buyButton = `<button onclick="buyWeight(${index})">Buy by kg</button>`;
+    } else {
+      buyButton = `<button onclick="addToCart(${index})">Add to Cart</button>`;
+    }
+
     productsDiv.innerHTML += `
       <div class="product">
         <img src="${item.image}">
         <h3>${item.name}</h3>
-        <p>Price: ₹${item.price}</p>
-        <p>Stock: ${item.stock}</p>
-        <button onclick="addToCart(${index})">Add to Cart</button>
+        <p>Price: ₹${item.price}${item.unit ? ' per ' + item.unit : ''}</p>
+        <p>Stock: ${item.stock}${item.unit ? ' ' + item.unit : ''}</p>
+        ${buyButton}
       </div>`;
   });
 };
 
-// Add to cart and reduce stock globally
+// Buy vegetables by weight
+window.buyWeight = async function(index){
+  const item = currentProducts[index];
+  let kg = parseFloat(prompt(`Enter weight in kg for ${item.name}:`));
+  if(isNaN(kg) || kg <= 0) return alert("Invalid weight");
+  if(kg > item.stock) return alert("Not enough stock");
+
+  const productRef = doc(db, "products", item.id);
+  await updateDoc(productRef, { stock: item.stock - kg });
+
+  cart.push({...item, price: item.price * kg, boughtKg: kg});
+  updateCart();
+  showCategory(item.category);
+};
+
+// Add non-vegetables to cart
 window.addToCart = async function(index){
   const item = currentProducts[index];
   if(item.stock <= 0){
@@ -221,10 +256,11 @@ function updateCart(){
 
   cart.forEach(item => {
     sum += item.price;
-    cartList.innerHTML += `<li>${item.name} - ₹${item.price}</li>`;
+    let unitText = item.boughtKg ? ` (${item.boughtKg}kg)` : '';
+    cartList.innerHTML += `<li>${item.name}${unitText} - ₹${item.price.toFixed(2)}</li>`;
   });
 
-  total.innerText = "Total: ₹" + sum;
+  total.innerText = "Total: ₹" + sum.toFixed(2);
 }
 
 // Cart toggle
@@ -246,4 +282,3 @@ window.checkout = function(){
 </script>
 </body>
 </html>
-
