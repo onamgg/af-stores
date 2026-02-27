@@ -44,7 +44,7 @@ button {
   <button onclick="goHome()">Back to Store</button>
 </div>
 
-<!-- Confetti library -->
+<!-- Confetti CDN -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <script>
@@ -52,30 +52,21 @@ function goHome(){
   window.location.href = "index.html";
 }
 
-// Confetti effect when page loads
-window.onload = () => {
-  // Shoot confetti from multiple angles
-  const duration = 5 * 1000; // 5 seconds
-  const end = Date.now() + duration;
+// Confetti effect on page load
+window.onload = function() {
+  const duration = 3 * 1000; // 3 seconds
+  const animationEnd = Date.now() + duration;
+  const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
 
-  (function frame() {
-    confetti({
-      particleCount: 5,
-      angle: 60,
-      spread: 55,
-      origin: { x: 0 }
-    });
-    confetti({
-      particleCount: 5,
-      angle: 120,
-      spread: 55,
-      origin: { x: 1 }
-    });
+  const interval = setInterval(function() {
+    const timeLeft = animationEnd - Date.now();
 
-    if (Date.now() < end) {
-      requestAnimationFrame(frame);
-    }
-  })();
+    if (timeLeft <= 0) return clearInterval(interval);
+
+    const particleCount = 5 + Math.random() * 5;
+    // since particles fall down, skew start velocity randomly
+    confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } }));
+  }, 250);
 };
 </script>
 
